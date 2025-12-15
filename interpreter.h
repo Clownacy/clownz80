@@ -1,5 +1,5 @@
-#ifndef CLOWNZ80_H
-#define CLOWNZ80_H
+#ifndef CLOWNZ80_INTERPRETER_H
+#define CLOWNZ80_INTERPRETER_H
 
 /* If enabled, a lookup table is used to optimise opcode decoding. Disable this to save RAM. */
 #define CLOWNZ80_PRECOMPUTE_INSTRUCTION_METADATA
@@ -34,4 +34,4 @@ void ClownZ80_Reset(ClownZ80_State *state);
 void ClownZ80_Interrupt(ClownZ80_State *state, cc_bool assert_interrupt);
 cc_u16f ClownZ80_DoCycle(ClownZ80_State *state, const ClownZ80_ReadAndWriteCallbacks *callbacks);
 
-#endif /* CLOWNZ80_H */
+#endif /* CLOWNZ80_INTERPRETER_H */

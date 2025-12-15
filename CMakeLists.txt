@@ -7,9 +7,9 @@ add_library(clownz80-common STATIC
 	"common.h"
 )
 
-add_library(clownz80 STATIC
-	"clownz80.c"
-	"clownz80.h"
+add_library(clownz80-interpreter STATIC
+	"interpreter.c"
+	"interpreter.h"
 )
 
-target_link_libraries(clownz80 PRIVATE clownz80-common)
+target_link_libraries(clownz80-interpreter PRIVATE clownz80-common)

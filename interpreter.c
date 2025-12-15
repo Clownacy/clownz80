@@ -5,7 +5,7 @@ https://floooh.github.io/2021/12/06/z80-instruction-timing.html
 
 /* TODO: R and I registers. */
 
-#include "clownz80.h"
+#include "interpreter.h"
 
 #include <assert.h>
 #include <stddef.h>
