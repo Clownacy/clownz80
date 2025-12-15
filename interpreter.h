@@ -32,6 +32,6 @@ void ClownZ80_Constant_Initialise(void);
 void ClownZ80_State_Initialise(ClownZ80_State *state);
 void ClownZ80_Reset(ClownZ80_State *state);
 void ClownZ80_Interrupt(ClownZ80_State *state, cc_bool assert_interrupt);
-cc_u16f ClownZ80_DoCycle(ClownZ80_State *state, const ClownZ80_ReadAndWriteCallbacks *callbacks);
+cc_u16f ClownZ80_DoInstruction(ClownZ80_State *state, const ClownZ80_ReadAndWriteCallbacks *callbacks);
 
 #endif /* CLOWNZ80_INTERPRETER_H */

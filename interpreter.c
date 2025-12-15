@@ -1985,7 +1985,7 @@ void ClownZ80_Interrupt(ClownZ80_State* const state, const cc_bool assert_interr
 	state->interrupt_pending = assert_interrupt;
 }
 
-cc_u16f ClownZ80_DoCycle(ClownZ80_State* const state, const ClownZ80_ReadAndWriteCallbacks* const callbacks)
+cc_u16f ClownZ80_DoInstruction(ClownZ80_State* const state, const ClownZ80_ReadAndWriteCallbacks* const callbacks)
 {
 	/* Process new instruction. */
 	Z80Instruction instruction;
