@@ -181,9 +181,9 @@ typedef struct ClownZ80_State
 
 typedef struct ClownZ80_ReadAndWriteCallbacks
 {
-	cc_u16f (*read)(const void *user_data, cc_u16f address);
-	void (*write)(const void *user_data, cc_u16f address, cc_u16f value);
-	CC_ATTRIBUTE_PRINTF(2, 3) void (*log)(const void *user_data, const char* const format, ...);
+	cc_u16f (*read)(void *user_data, cc_u16f address);
+	void (*write)(void *user_data, cc_u16f address, cc_u16f value);
+	CC_ATTRIBUTE_PRINTF(2, 3) void (*log)(void *user_data, const char* const format, ...);
 	const void *user_data;
 } ClownZ80_ReadAndWriteCallbacks;
 

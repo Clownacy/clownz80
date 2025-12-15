@@ -93,7 +93,7 @@ static cc_u16f MemoryRead(ClownZ80_State* const state, const ClownZ80_ReadAndWri
 	/* Memory accesses take 3 cycles. */
 	state->cycles += 3;
 
-	return callbacks->read(callbacks->user_data, address);
+	return callbacks->read((void*)callbacks->user_data, address);
 }
 
 static void MemoryWrite(ClownZ80_State* const state, const ClownZ80_ReadAndWriteCallbacks* const callbacks, const cc_u16f address, const cc_u16f data)
@@ -101,7 +101,7 @@ static void MemoryWrite(ClownZ80_State* const state, const ClownZ80_ReadAndWrite
 	/* Memory accesses take 3 cycles. */
 	state->cycles += 3;
 
-	callbacks->write(callbacks->user_data, address, data);
+	callbacks->write((void*)callbacks->user_data, address, data);
 }
 
 static cc_u16f InstructionMemoryRead(ClownZ80_State* const state, const ClownZ80_ReadAndWriteCallbacks* const callbacks)
@@ -1096,7 +1096,7 @@ static void ExecuteInstruction(ClownZ80_State* const state, const ClownZ80_ReadA
 
 	switch ((ClownZ80_Opcode)instruction->metadata->opcode)
 	{
-		#define UNIMPLEMENTED_Z80_INSTRUCTION(instruction) callbacks->log(callbacks->user_data, "Unimplemented instruction " instruction " used at 0x%" CC_PRIXLEAST16, state->program_counter)
+		#define UNIMPLEMENTED_Z80_INSTRUCTION(instruction) callbacks->log((void*)callbacks->user_data, "Unimplemented instruction " instruction " used at 0x%" CC_PRIXLEAST16, state->program_counter)
 
 		case CLOWNZ80_OPCODE_NOP:
 			/* Does nothing, naturally. */
@@ -2546,11 +2546,11 @@ cc_u16f ClownZ80_DoCycle(ClownZ80_State* const state, const ClownZ80_ReadAndWrit
 
 		--state->stack_pointer;
 		state->stack_pointer &= 0xFFFF;
-		callbacks->write(callbacks->user_data, state->stack_pointer, state->program_counter >> 8);
+		callbacks->write((void*)callbacks->user_data, state->stack_pointer, state->program_counter >> 8);
 
 		--state->stack_pointer;
 		state->stack_pointer &= 0xFFFF;
-		callbacks->write(callbacks->user_data, state->stack_pointer, state->program_counter & 0xFF);
+		callbacks->write((void*)callbacks->user_data, state->stack_pointer, state->program_counter & 0xFF);
 
 		state->program_counter = 0x38;
 	}
