@@ -183,6 +183,7 @@ typedef struct Z80_ReadAndWriteCallbacks
 {
 	cc_u16f (*read)(const void *user_data, cc_u16f address);
 	void (*write)(const void *user_data, cc_u16f address, cc_u16f value);
+	void (*log)(const void *user_data, const char* const format, ...);
 	const void *user_data;
 } Z80_ReadAndWriteCallbacks;
 
