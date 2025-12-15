@@ -148,6 +148,13 @@ typedef enum ClownZ80_Condition
 	CLOWNZ80_CONDITION_MINUS = 7
 } ClownZ80_Condition;
 
+typedef enum ClownZ80_InstructionMode
+{
+	CLOWNZ80_INSTRUCTION_MODE_NORMAL,
+	CLOWNZ80_INSTRUCTION_MODE_BITS,
+	CLOWNZ80_INSTRUCTION_MODE_MISC
+} ClownZ80_InstructionMode;
+
 typedef enum ClownZ80_RegisterMode
 {
 	CLOWNZ80_REGISTER_MODE_HL,

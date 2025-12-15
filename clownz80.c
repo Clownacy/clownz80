@@ -12,13 +12,6 @@ https://floooh.github.io/2021/12/06/z80-instruction-timing.html
 
 #include "clowncommon/clowncommon.h"
 
-typedef enum InstructionMode
-{
-	INSTRUCTION_MODE_NORMAL,
-	INSTRUCTION_MODE_BITS,
-	INSTRUCTION_MODE_MISC
-} InstructionMode;
-
 enum
 {
 	FLAG_BIT_CARRY = 0,
@@ -371,7 +364,7 @@ static void WriteOperand(ClownZ80_State* const state, const ClownZ80_ReadAndWrit
 	}
 }
 
-static void DecodeInstructionMetadata(ClownZ80_InstructionMetadata* const metadata, const InstructionMode instruction_mode, const ClownZ80_RegisterMode register_mode, const cc_u8l opcode)
+static void DecodeInstructionMetadata(ClownZ80_InstructionMetadata* const metadata, const ClownZ80_InstructionMode instruction_mode, const ClownZ80_RegisterMode register_mode, const cc_u8l opcode)
 {
 	static const ClownZ80_Operand registers[8] = {CLOWNZ80_OPERAND_B, CLOWNZ80_OPERAND_C, CLOWNZ80_OPERAND_D, CLOWNZ80_OPERAND_E, CLOWNZ80_OPERAND_H, CLOWNZ80_OPERAND_L, CLOWNZ80_OPERAND_HL_INDIRECT, CLOWNZ80_OPERAND_A};
 	static const ClownZ80_Operand register_pairs_1[4] = {CLOWNZ80_OPERAND_BC, CLOWNZ80_OPERAND_DE, CLOWNZ80_OPERAND_HL, CLOWNZ80_OPERAND_SP};
@@ -400,7 +393,7 @@ static void DecodeInstructionMetadata(ClownZ80_InstructionMetadata* const metada
 
 	switch (instruction_mode)
 	{
-		case INSTRUCTION_MODE_NORMAL:
+		case CLOWNZ80_INSTRUCTION_MODE_NORMAL:
 			switch (x)
 			{
 				case 0:
@@ -677,7 +670,7 @@ static void DecodeInstructionMetadata(ClownZ80_InstructionMetadata* const metada
 
 			break;
 
-		case INSTRUCTION_MODE_BITS:
+		case CLOWNZ80_INSTRUCTION_MODE_BITS:
 			switch (x)
 			{
 				case 0:
@@ -706,7 +699,7 @@ static void DecodeInstructionMetadata(ClownZ80_InstructionMetadata* const metada
 
 			break;
 
-		case INSTRUCTION_MODE_MISC:
+		case CLOWNZ80_INSTRUCTION_MODE_MISC:
 			switch (x)
 			{
 				case 0:
@@ -907,7 +900,7 @@ static void DecodeInstruction(ClownZ80_State* const state, const ClownZ80_ReadAn
 #ifdef CLOWNZ80_PRECOMPUTE_INSTRUCTION_METADATA
 	instruction->metadata = &instruction_metadata_lookup_normal[state->register_mode][opcode];
 #else
-	DecodeInstructionMetadata(instruction->metadata, INSTRUCTION_MODE_NORMAL, (ClownZ80_RegisterMode)state->register_mode, opcode);
+	DecodeInstructionMetadata(instruction->metadata, CLOWNZ80_INSTRUCTION_MODE_NORMAL, (ClownZ80_RegisterMode)state->register_mode, opcode);
 #endif
 
 	/* Obtain displacement byte if one exists. */
@@ -938,7 +931,7 @@ static void DecodeInstruction(ClownZ80_State* const state, const ClownZ80_ReadAn
 			#ifdef CLOWNZ80_PRECOMPUTE_INSTRUCTION_METADATA
 				instruction->metadata = &instruction_metadata_lookup_bits[state->register_mode][opcode];
 			#else
-				DecodeInstructionMetadata(instruction->metadata, INSTRUCTION_MODE_BITS, (ClownZ80_RegisterMode)state->register_mode, opcode);
+				DecodeInstructionMetadata(instruction->metadata, CLOWNZ80_INSTRUCTION_MODE_BITS, (ClownZ80_RegisterMode)state->register_mode, opcode);
 			#endif
 			}
 			else
@@ -961,14 +954,14 @@ static void DecodeInstruction(ClownZ80_State* const state, const ClownZ80_ReadAn
 			#ifdef CLOWNZ80_PRECOMPUTE_INSTRUCTION_METADATA
 				instruction->metadata = &instruction_metadata_lookup_bits[CLOWNZ80_REGISTER_MODE_HL][opcode];
 			#else
-				DecodeInstructionMetadata(instruction->metadata, INSTRUCTION_MODE_BITS, CLOWNZ80_REGISTER_MODE_HL, opcode);
+				DecodeInstructionMetadata(instruction->metadata, CLOWNZ80_INSTRUCTION_MODE_BITS, CLOWNZ80_REGISTER_MODE_HL, opcode);
 			#endif
 
 				if (instruction->metadata->operands[1] == CLOWNZ80_OPERAND_HL_INDIRECT)
 				#ifdef CLOWNZ80_PRECOMPUTE_INSTRUCTION_METADATA
 					instruction->metadata = &instruction_metadata_lookup_bits[state->register_mode][opcode];
 				#else
-					DecodeInstructionMetadata(instruction->metadata, INSTRUCTION_MODE_BITS, (ClownZ80_RegisterMode)state->register_mode, opcode);
+					DecodeInstructionMetadata(instruction->metadata, CLOWNZ80_INSTRUCTION_MODE_BITS, (ClownZ80_RegisterMode)state->register_mode, opcode);
 				#endif
 			}
 
@@ -980,7 +973,7 @@ static void DecodeInstruction(ClownZ80_State* const state, const ClownZ80_ReadAn
 		#ifdef CLOWNZ80_PRECOMPUTE_INSTRUCTION_METADATA
 			instruction->metadata = &instruction_metadata_lookup_misc[opcode];
 		#else
-			DecodeInstructionMetadata(instruction->metadata, INSTRUCTION_MODE_MISC, CLOWNZ80_REGISTER_MODE_HL, opcode);
+			DecodeInstructionMetadata(instruction->metadata, CLOWNZ80_INSTRUCTION_MODE_MISC, CLOWNZ80_REGISTER_MODE_HL, opcode);
 		#endif
 
 			break;
@@ -2473,15 +2466,15 @@ void ClownZ80_Constant_Initialise(void)
 	/* Pre-compute instruction metadata, to speed up opcode decoding. */
 	for (i = 0; i < 0x100; ++i)
 	{
-		DecodeInstructionMetadata(&instruction_metadata_lookup_normal[CLOWNZ80_REGISTER_MODE_HL][i], INSTRUCTION_MODE_NORMAL, CLOWNZ80_REGISTER_MODE_HL, i);
-		DecodeInstructionMetadata(&instruction_metadata_lookup_normal[CLOWNZ80_REGISTER_MODE_IX][i], INSTRUCTION_MODE_NORMAL, CLOWNZ80_REGISTER_MODE_IX, i);
-		DecodeInstructionMetadata(&instruction_metadata_lookup_normal[CLOWNZ80_REGISTER_MODE_IY][i], INSTRUCTION_MODE_NORMAL, CLOWNZ80_REGISTER_MODE_IY, i);
+		DecodeInstructionMetadata(&instruction_metadata_lookup_normal[CLOWNZ80_REGISTER_MODE_HL][i], CLOWNZ80_INSTRUCTION_MODE_NORMAL, CLOWNZ80_REGISTER_MODE_HL, i);
+		DecodeInstructionMetadata(&instruction_metadata_lookup_normal[CLOWNZ80_REGISTER_MODE_IX][i], CLOWNZ80_INSTRUCTION_MODE_NORMAL, CLOWNZ80_REGISTER_MODE_IX, i);
+		DecodeInstructionMetadata(&instruction_metadata_lookup_normal[CLOWNZ80_REGISTER_MODE_IY][i], CLOWNZ80_INSTRUCTION_MODE_NORMAL, CLOWNZ80_REGISTER_MODE_IY, i);
 
-		DecodeInstructionMetadata(&instruction_metadata_lookup_bits[CLOWNZ80_REGISTER_MODE_HL][i], INSTRUCTION_MODE_BITS, CLOWNZ80_REGISTER_MODE_HL, i);
-		DecodeInstructionMetadata(&instruction_metadata_lookup_bits[CLOWNZ80_REGISTER_MODE_IX][i], INSTRUCTION_MODE_BITS, CLOWNZ80_REGISTER_MODE_IX, i);
-		DecodeInstructionMetadata(&instruction_metadata_lookup_bits[CLOWNZ80_REGISTER_MODE_IY][i], INSTRUCTION_MODE_BITS, CLOWNZ80_REGISTER_MODE_IY, i);
+		DecodeInstructionMetadata(&instruction_metadata_lookup_bits[CLOWNZ80_REGISTER_MODE_HL][i], CLOWNZ80_INSTRUCTION_MODE_BITS, CLOWNZ80_REGISTER_MODE_HL, i);
+		DecodeInstructionMetadata(&instruction_metadata_lookup_bits[CLOWNZ80_REGISTER_MODE_IX][i], CLOWNZ80_INSTRUCTION_MODE_BITS, CLOWNZ80_REGISTER_MODE_IX, i);
+		DecodeInstructionMetadata(&instruction_metadata_lookup_bits[CLOWNZ80_REGISTER_MODE_IY][i], CLOWNZ80_INSTRUCTION_MODE_BITS, CLOWNZ80_REGISTER_MODE_IY, i);
 
-		DecodeInstructionMetadata(&instruction_metadata_lookup_misc[i], INSTRUCTION_MODE_MISC, CLOWNZ80_REGISTER_MODE_HL, i);
+		DecodeInstructionMetadata(&instruction_metadata_lookup_misc[i], CLOWNZ80_INSTRUCTION_MODE_MISC, CLOWNZ80_REGISTER_MODE_HL, i);
 	}
 #endif
 }
