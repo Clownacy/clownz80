@@ -606,11 +606,17 @@ static void PrintOperand(State* const state, const unsigned int operand_index)
 			state->print_callback(state->user_data, "(hl)");
 			break;
 		case CLOWNZ80_OPERAND_IX_INDIRECT:
-			state->print_callback(state->user_data, "(ix%+" CC_PRIdFAST16 ")", CC_SIGN_EXTEND(cc_s16f, 7, (cc_s16f)ReadByte(state)));
+		{
+			const cc_s16f byte = (cc_s16f)ReadByte(state);
+			state->print_callback(state->user_data, "(ix%+" CC_PRIdFAST16 ")", CC_SIGN_EXTEND(cc_s16f, 7, byte));
 			break;
+		}
 		case CLOWNZ80_OPERAND_IY_INDIRECT:
-			state->print_callback(state->user_data, "(iy%+" CC_PRIdFAST16 ")", CC_SIGN_EXTEND(cc_s16f, 7, (cc_s16f)ReadByte(state)));
+		{
+			const cc_s16f byte = (cc_s16f)ReadByte(state);
+			state->print_callback(state->user_data, "(iy%+" CC_PRIdFAST16 ")", CC_SIGN_EXTEND(cc_s16f, 7, byte));
 			break;
+		}
 		case CLOWNZ80_OPERAND_ADDRESS:
 		{
 			const unsigned int first_byte = ReadByte(state);
