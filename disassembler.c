@@ -419,7 +419,7 @@ static void PrintSpecialOperands(State* const state)
 
 		case CLOWNZ80_OPCODE_RST:
 		case CLOWNZ80_OPCODE_IM:
-			state->print_callback(state->user_data, "%" CC_PRIuLEAST8, state->metadata.embedded_literal);
+			PrintHexadecimal(state, state->metadata.embedded_literal);
 			break;
 
 		case CLOWNZ80_OPCODE_BIT:
