@@ -633,24 +633,18 @@ static void PrintOperand(State* const state, const unsigned int operand_index)
 	}
 }
 
-cc_bool ClownZ80_Disassemble(const unsigned long address, ClownZ80_ReadCallback read_callback, CC_ATTRIBUTE_PRINTF(2, 3) const ClownZ80_PrintCallback print_callback, const void* const user_data)
+static cc_bool DisassembleInstruction(State* const state)
 {
-	State state;
 	ClownZ80_InstructionMode instruction_mode = CLOWNZ80_INSTRUCTION_MODE_NORMAL;
 	ClownZ80_RegisterMode register_mode = CLOWNZ80_REGISTER_MODE_HL;
 
-	state.address = address;
-	state.read_callback = read_callback;
-	state.print_callback = print_callback;
-	state.user_data = (void*)user_data;
-
-	state.print_callback(state.user_data, "%08lX: ", state.address);
+	state->print_callback(state->user_data, "%08lX: ", state->address);
 
 	for (;;)
 	{
-		ClownZ80_DecodeInstructionMetadata(&state.metadata, instruction_mode, register_mode, ReadByte(&state));
+		ClownZ80_DecodeInstructionMetadata(&state->metadata, instruction_mode, register_mode, ReadByte(state));
 
-		switch (state.metadata.opcode)
+		switch (state->metadata.opcode)
 		{
 			case CLOWNZ80_OPCODE_CB_PREFIX:
 				instruction_mode = CLOWNZ80_INSTRUCTION_MODE_BITS;
@@ -669,25 +663,40 @@ cc_bool ClownZ80_Disassemble(const unsigned long address, ClownZ80_ReadCallback 
 		break;
 	}
 
-	state.print_callback(state.user_data, "%-5s", GetOpcodeString((ClownZ80_Opcode)state.metadata.opcode));
-	PrintSpecialOperands(&state);
+	state->print_callback(state->user_data, "%-5s", GetOpcodeString((ClownZ80_Opcode)state->metadata.opcode));
+	PrintSpecialOperands(state);
 
-	if (state.metadata.operands[0] != CLOWNZ80_OPERAND_NONE && state.metadata.operands[1] != CLOWNZ80_OPERAND_NONE)
+	if (state->metadata.operands[0] != CLOWNZ80_OPERAND_NONE && state->metadata.operands[1] != CLOWNZ80_OPERAND_NONE)
 	{
-		PrintOperand(&state, 1);
-		state.print_callback(state.user_data, ",");
-		PrintOperand(&state, 0);
+		PrintOperand(state, 1);
+		state->print_callback(state->user_data, ",");
+		PrintOperand(state, 0);
 	}
-	else if (state.metadata.operands[0] != CLOWNZ80_OPERAND_NONE)
+	else if (state->metadata.operands[0] != CLOWNZ80_OPERAND_NONE)
 	{
-		PrintOperand(&state, 0);
+		PrintOperand(state, 0);
 	}
-	else if (state.metadata.operands[1] != CLOWNZ80_OPERAND_NONE)
+	else if (state->metadata.operands[1] != CLOWNZ80_OPERAND_NONE)
 	{
-		PrintOperand(&state, 1);
+		PrintOperand(state, 1);
 	}
 
-	state.print_callback(state.user_data, "\n");
+	state->print_callback(state->user_data, "\n");
 
-	return !IsTerminatingInstruction((ClownZ80_Opcode)state.metadata.opcode);
+	return !IsTerminatingInstruction((ClownZ80_Opcode)state->metadata.opcode);
+}
+
+void ClownZ80_Disassemble(const unsigned long address, const unsigned int maximum_instructions, ClownZ80_ReadCallback read_callback, CC_ATTRIBUTE_PRINTF(2, 3) const ClownZ80_PrintCallback print_callback, const void* const user_data)
+{
+	State state;
+	unsigned int i;
+
+	state.address = address;
+	state.read_callback = read_callback;
+	state.print_callback = print_callback;
+	state.user_data = (void*)user_data;
+
+	for (i = 0; i < maximum_instructions; ++i)
+		if (!DisassembleInstruction(&state))
+			break;
 }
