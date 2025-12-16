@@ -391,13 +391,13 @@ static void PrintSpecialOperands(State* const state)
 			break;
 
 		case CLOWNZ80_OPCODE_RET_CONDITIONAL:
-			state->print_callback(state->user_data, "%s", GetConditionString(state->metadata.condition));
+			state->print_callback(state->user_data, "%s", GetConditionString((ClownZ80_Condition)state->metadata.condition));
 			break;
 
 		case CLOWNZ80_OPCODE_JR_CONDITIONAL:
 		case CLOWNZ80_OPCODE_JP_CONDITIONAL:
 		case CLOWNZ80_OPCODE_CALL_CONDITIONAL:
-			state->print_callback(state->user_data, "%s,", GetConditionString(state->metadata.condition));
+			state->print_callback(state->user_data, "%s,", GetConditionString((ClownZ80_Condition)state->metadata.condition));
 			break;
 
 		case CLOWNZ80_OPCODE_EX_SP_HL:
@@ -662,7 +662,7 @@ cc_bool ClownZ80_Disassemble(const unsigned char* const machine_code, size_t* co
 		break;
 	}
 
-	state.print_callback(state.user_data, "%-5s", GetOpcodeString(state.metadata.opcode));
+	state.print_callback(state.user_data, "%-5s", GetOpcodeString((ClownZ80_Opcode)state.metadata.opcode));
 	PrintSpecialOperands(&state);
 
 	if (state.metadata.operands[0] != CLOWNZ80_OPERAND_NONE && state.metadata.operands[1] != CLOWNZ80_OPERAND_NONE)
@@ -684,5 +684,5 @@ cc_bool ClownZ80_Disassemble(const unsigned char* const machine_code, size_t* co
 
 	*bytes_read = state.bytes_read;
 
-	return !IsTerminatingInstruction(state.metadata.opcode);
+	return !IsTerminatingInstruction((ClownZ80_Opcode)state.metadata.opcode);
 }
