@@ -28,11 +28,13 @@ static void PrintHexadecimal(State* const state, const unsigned int number)
 
 	sprintf(buffer, "%X", number);
 
+	/* Z80 assembly requires that hexadecimal numbers start with a decimal digit. */
 	if (buffer[0] > '9')
 		state->print_callback(state->user_data, "0");
 
 	state->print_callback(state->user_data, "%s", buffer);
 
+	/* Add hexadecimal suffix only when necessary, to avoid visual clutter. */
 	if (number > 9)
 		state->print_callback(state->user_data, "h");
 }
