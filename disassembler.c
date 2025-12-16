@@ -1,5 +1,6 @@
 #include "disassembler.h"
 
+#include <assert.h>
 #include <stdio.h>
 
 #include "common.h"
@@ -16,6 +17,7 @@ typedef struct State
 
 static void PrintHexadecimal(State* const state, const unsigned int number)
 {
+	/* Assumes that numbers are 16-bit at most. */
 	char buffer[4 + 1];
 
 	sprintf(buffer, "%X", number);
@@ -51,6 +53,7 @@ static unsigned int BitmaskToIndex(const unsigned int mask)
 			return 7;
 	}
 
+	assert(cc_false);
 	return 0;
 }
 
@@ -613,7 +616,6 @@ static void PrintOperand(State* const state, const unsigned int operand_index)
 			state->print_callback(state->user_data, ")");
 			break;
 		}
-			break;
 		case CLOWNZ80_OPERAND_LITERAL_8BIT:
 			PrintHexadecimal(state, state->machine_code[state->bytes_read++]);
 			break;
