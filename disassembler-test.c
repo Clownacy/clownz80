@@ -73,7 +73,7 @@ int main(const int argc, char** const argv)
 
 	sscanf(argv[2], "%lX", &file_position);
 
-	while (ClownZ80_Disassemble(ReadCallback, PrintCallback, NULL));
+	while (ClownZ80_Disassemble(file_position, ReadCallback, PrintCallback, NULL));
 
 	free(file_buffer);
 
