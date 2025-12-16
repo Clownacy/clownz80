@@ -629,10 +629,10 @@ static void PrintOperand(State* const state, const unsigned int operand_index)
 			state->print_callback(state->user_data, "(hl)");
 			break;
 		case CLOWNZ80_OPERAND_IX_INDIRECT:
-			state->print_callback(state->user_data, "(ix%+" CC_PRIdFAST16 ")", ReadSignedByte(state));
+			state->print_callback(state->user_data, "(ix%+d)", ReadSignedByte(state));
 			break;
 		case CLOWNZ80_OPERAND_IY_INDIRECT:
-			state->print_callback(state->user_data, "(iy%+" CC_PRIdFAST16 ")", ReadSignedByte(state));
+			state->print_callback(state->user_data, "(iy%+d)", ReadSignedByte(state));
 			break;
 		case CLOWNZ80_OPERAND_ADDRESS:
 			state->print_callback(state->user_data, "(");
