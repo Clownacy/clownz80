@@ -446,12 +446,7 @@ static void PrintSpecialOperands(State* const state)
 
 		case CLOWNZ80_OPCODE_ADD_A:
 		case CLOWNZ80_OPCODE_ADC_A:
-		case CLOWNZ80_OPCODE_SUB:
 		case CLOWNZ80_OPCODE_SBC_A:
-		case CLOWNZ80_OPCODE_AND:
-		case CLOWNZ80_OPCODE_XOR:
-		case CLOWNZ80_OPCODE_OR:
-		case CLOWNZ80_OPCODE_CP:
 			state->print_callback(state->user_data, "a,");
 			break;
 
@@ -478,6 +473,11 @@ static void PrintSpecialOperands(State* const state)
 		case CLOWNZ80_OPCODE_SCF:
 		case CLOWNZ80_OPCODE_CCF:
 		case CLOWNZ80_OPCODE_HALT:
+		case CLOWNZ80_OPCODE_SUB:
+		case CLOWNZ80_OPCODE_AND:
+		case CLOWNZ80_OPCODE_XOR:
+		case CLOWNZ80_OPCODE_OR:
+		case CLOWNZ80_OPCODE_CP:
 		case CLOWNZ80_OPCODE_POP:
 		case CLOWNZ80_OPCODE_RET_UNCONDITIONAL:
 		case CLOWNZ80_OPCODE_EXX:
