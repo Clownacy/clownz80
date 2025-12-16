@@ -21,6 +21,19 @@ static unsigned char ReadByte(State* const state)
 	return state->read_callback(state->user_data);
 }
 
+static int ReadSignedByte(State* const state)
+{
+	const int offset = ReadByte(state);
+	return CC_SIGN_EXTEND(int, 7, offset);
+}
+
+static unsigned int ReadTwoBytes(State* const state)
+{
+	const unsigned int first_byte = ReadByte(state);
+	const unsigned int second_byte = ReadByte(state);
+	return first_byte | ((unsigned int)second_byte << 8);
+}
+
 static void PrintHexadecimal(State* const state, const unsigned int number)
 {
 	/* Assumes that numbers are 16-bit at most. */
@@ -409,14 +422,11 @@ static void PrintSpecialOperands(State* const state)
 			state->print_callback(state->user_data, "%s,", GetConditionString((ClownZ80_Condition)state->metadata.condition));
 			/* Fallthrough */
 		case CLOWNZ80_OPCODE_JR_UNCONDITIONAL:
-		{
 			/* Turn the offset into an absolute address, to better match how assembly is written. */
-			const cc_s16f offset = ReadByte(state);
-			PrintHexadecimal(state, state->address + CC_SIGN_EXTEND(cc_s16f, 7, offset));
+			PrintHexadecimal(state, state->address + ReadSignedByte(state));
 			/* Since we manually handled the operand, blank them to prevent them from being printed a second time. */
 			state->metadata.operands[0] = state->metadata.operands[1] = CLOWNZ80_OPERAND_NONE;
 			break;
-		}
 
 		case CLOWNZ80_OPCODE_JP_CONDITIONAL:
 		case CLOWNZ80_OPCODE_CALL_CONDITIONAL:
@@ -619,36 +629,22 @@ static void PrintOperand(State* const state, const unsigned int operand_index)
 			state->print_callback(state->user_data, "(hl)");
 			break;
 		case CLOWNZ80_OPERAND_IX_INDIRECT:
-		{
-			const cc_s16f byte = (cc_s16f)ReadByte(state);
-			state->print_callback(state->user_data, "(ix%+" CC_PRIdFAST16 ")", CC_SIGN_EXTEND(cc_s16f, 7, byte));
+			state->print_callback(state->user_data, "(ix%+" CC_PRIdFAST16 ")", ReadSignedByte(state));
 			break;
-		}
 		case CLOWNZ80_OPERAND_IY_INDIRECT:
-		{
-			const cc_s16f byte = (cc_s16f)ReadByte(state);
-			state->print_callback(state->user_data, "(iy%+" CC_PRIdFAST16 ")", CC_SIGN_EXTEND(cc_s16f, 7, byte));
+			state->print_callback(state->user_data, "(iy%+" CC_PRIdFAST16 ")", ReadSignedByte(state));
 			break;
-		}
 		case CLOWNZ80_OPERAND_ADDRESS:
-		{
-			const unsigned int first_byte = ReadByte(state);
-			const unsigned int second_byte = ReadByte(state);
 			state->print_callback(state->user_data, "(");
-			PrintHexadecimal(state, first_byte | (second_byte << 8));
+			PrintHexadecimal(state, ReadTwoBytes(state));
 			state->print_callback(state->user_data, ")");
 			break;
-		}
 		case CLOWNZ80_OPERAND_LITERAL_8BIT:
 			PrintHexadecimal(state, ReadByte(state));
 			break;
 		case CLOWNZ80_OPERAND_LITERAL_16BIT:
-		{
-			const unsigned int first_byte = ReadByte(state);
-			const unsigned int second_byte = ReadByte(state);
-			PrintHexadecimal(state, first_byte | (second_byte << 8));
+			PrintHexadecimal(state, ReadTwoBytes(state));
 			break;
-		}
 	}
 }
 
