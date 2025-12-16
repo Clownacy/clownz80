@@ -6,6 +6,10 @@
 
 #include "disassembler.h"
 
+static unsigned char *file_buffer;
+static size_t file_size;
+static long file_position;
+
 static cc_bool FileToBuffer(const char* const file_path, unsigned char** const file_buffer, size_t* const file_size)
 {
 	cc_bool success = cc_false;
@@ -38,6 +42,13 @@ static cc_bool FileToBuffer(const char* const file_path, unsigned char** const f
 	return success;
 }
 
+static unsigned char ReadCallback(void* const user_data)
+{
+	(void)user_data;
+
+	return file_buffer[file_position++];
+}
+
 static void PrintCallback(void* const user_data, const char* const format, ...)
 {
 	va_list args;
@@ -51,17 +62,11 @@ static void PrintCallback(void* const user_data, const char* const format, ...)
 
 int main(const int argc, char** const argv)
 {
-	unsigned char *file_buffer;
-	size_t file_size;
-	long index = 0;
-	size_t bytes_read;
-
 	FileToBuffer(argv[1], &file_buffer, &file_size);
 
-	sscanf(argv[2], "%X", &index);
+	sscanf(argv[2], "%lX", &file_position);
 
-	while (ClownZ80_Disassemble(&file_buffer[index], &bytes_read, PrintCallback, NULL))
-		index += bytes_read;
+	while (ClownZ80_Disassemble(ReadCallback, PrintCallback, NULL));
 
 	free(file_buffer);
 

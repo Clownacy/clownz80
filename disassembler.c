@@ -7,8 +7,7 @@
 
 typedef struct State
 {
-	const unsigned char *machine_code;
-	size_t bytes_read;
+	ClownZ80_ReadCallback read_callback;
 	CC_ATTRIBUTE_PRINTF(2, 3) ClownZ80_PrintCallback print_callback;
 	void *user_data;
 
@@ -600,50 +599,46 @@ static void PrintOperand(State* const state, const unsigned int operand_index)
 			state->print_callback(state->user_data, "(hl)");
 			break;
 		case CLOWNZ80_OPERAND_IX_INDIRECT:
-			state->print_callback(state->user_data, "(ix%+" CC_PRIdFAST16 ")", CC_SIGN_EXTEND(cc_s16f, 7, (cc_s16f)state->machine_code[state->bytes_read]));
-			++state->bytes_read;
+			state->print_callback(state->user_data, "(ix%+" CC_PRIdFAST16 ")", CC_SIGN_EXTEND(cc_s16f, 7, (cc_s16f)state->read_callback(state->user_data)));
 			break;
 		case CLOWNZ80_OPERAND_IY_INDIRECT:
-			state->print_callback(state->user_data, "(iy%+" CC_PRIdFAST16 ")", CC_SIGN_EXTEND(cc_s16f, 7, (cc_s16f)state->machine_code[state->bytes_read]));
-			++state->bytes_read;
+			state->print_callback(state->user_data, "(iy%+" CC_PRIdFAST16 ")", CC_SIGN_EXTEND(cc_s16f, 7, (cc_s16f)state->read_callback(state->user_data)));
 			break;
 		case CLOWNZ80_OPERAND_ADDRESS:
 		{
-			const unsigned int first_byte = state->machine_code[state->bytes_read++];
-			const unsigned int second_byte = state->machine_code[state->bytes_read++];
+			const unsigned int first_byte = state->read_callback(state->user_data);
+			const unsigned int second_byte = state->read_callback(state->user_data);
 			state->print_callback(state->user_data, "(");
 			PrintHexadecimal(state, first_byte | (second_byte << 8));
 			state->print_callback(state->user_data, ")");
 			break;
 		}
 		case CLOWNZ80_OPERAND_LITERAL_8BIT:
-			PrintHexadecimal(state, state->machine_code[state->bytes_read++]);
+			PrintHexadecimal(state, state->read_callback(state->user_data));
 			break;
 		case CLOWNZ80_OPERAND_LITERAL_16BIT:
 		{
-			const unsigned int first_byte = state->machine_code[state->bytes_read++];
-			const unsigned int second_byte = state->machine_code[state->bytes_read++];
+			const unsigned int first_byte = state->read_callback(state->user_data);
+			const unsigned int second_byte = state->read_callback(state->user_data);
 			PrintHexadecimal(state, first_byte | (second_byte << 8));
 			break;
 		}
 	}
 }
 
-cc_bool ClownZ80_Disassemble(const unsigned char* const machine_code, size_t* const bytes_read, CC_ATTRIBUTE_PRINTF(2, 3) const ClownZ80_PrintCallback print_callback, const void* const user_data)
+cc_bool ClownZ80_Disassemble(ClownZ80_ReadCallback read_callback, CC_ATTRIBUTE_PRINTF(2, 3) const ClownZ80_PrintCallback print_callback, const void* const user_data)
 {
 	State state;
 	ClownZ80_InstructionMode instruction_mode = CLOWNZ80_INSTRUCTION_MODE_NORMAL;
 	ClownZ80_RegisterMode register_mode = CLOWNZ80_REGISTER_MODE_HL;
 
-	state.machine_code = machine_code;
-	state.bytes_read = 0;
+	state.read_callback = read_callback;
 	state.print_callback = print_callback;
 	state.user_data = (void*)user_data;
 
 	for (;;)
 	{
-		ClownZ80_DecodeInstructionMetadata(&state.metadata, instruction_mode, register_mode, state.machine_code[state.bytes_read]);
-		++state.bytes_read;
+		ClownZ80_DecodeInstructionMetadata(&state.metadata, instruction_mode, register_mode, state.read_callback(state.user_data));
 
 		switch (state.metadata.opcode)
 		{
@@ -683,8 +678,6 @@ cc_bool ClownZ80_Disassemble(const unsigned char* const machine_code, size_t* co
 	}
 
 	state.print_callback(state.user_data, "\n");
-
-	*bytes_read = state.bytes_read;
 
 	return !IsTerminatingInstruction((ClownZ80_Opcode)state.metadata.opcode);
 }
