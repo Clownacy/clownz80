@@ -264,6 +264,31 @@ static const char* GetOperandString(const ClownZ80_Operand operand)
 	return "[INVALID]";
 }
 
+static const char* GetConditionString(const ClownZ80_Condition condition)
+{
+	switch (condition)
+	{
+		case CLOWNZ80_CONDITION_NOT_ZERO:
+			return "nz";
+		case CLOWNZ80_CONDITION_ZERO:
+			return "z";
+		case CLOWNZ80_CONDITION_NOT_CARRY:
+			return "nc";
+		case CLOWNZ80_CONDITION_CARRY:
+			return "c";
+		case CLOWNZ80_CONDITION_PARITY_OVERFLOW:
+			return "po";
+		case CLOWNZ80_CONDITION_PARITY_EQUALITY:
+			return "pe";
+		case CLOWNZ80_CONDITION_PLUS:
+			return "p";
+		case CLOWNZ80_CONDITION_MINUS:
+			return "m";
+	}
+
+	return "[INVALID]";
+}
+
 static cc_bool IsTerminatingInstruction(const ClownZ80_Opcode opcode)
 {
 	switch (opcode)
@@ -370,21 +395,184 @@ static cc_bool IsTerminatingInstruction(const ClownZ80_Opcode opcode)
 	return cc_false;
 }
 
+static void PrintSpecialOperands(const ClownZ80_InstructionMetadata* const metadata, CC_ATTRIBUTE_PRINTF(2, 3) const ClownZ80_PrintCallback print_callback, const void* const user_data)
+{
+	switch ((ClownZ80_Opcode)metadata->opcode)
+	{
+		case CLOWNZ80_OPCODE_EX_AF_AF:
+			print_callback((void*)user_data, "af,af'");
+			break;
+
+		case CLOWNZ80_OPCODE_RET_CONDITIONAL:
+			print_callback((void*)user_data, "%s", GetConditionString(metadata->condition));
+			break;
+
+		case CLOWNZ80_OPCODE_JR_CONDITIONAL:
+		case CLOWNZ80_OPCODE_JP_CONDITIONAL:
+		case CLOWNZ80_OPCODE_CALL_CONDITIONAL:
+			print_callback((void*)user_data, "%s,", GetConditionString(metadata->condition));
+			break;
+
+		case CLOWNZ80_OPCODE_EX_SP_HL:
+			print_callback((void*)user_data, "(sp),");
+			break;
+
+		case CLOWNZ80_OPCODE_EX_DE_HL:
+			print_callback((void*)user_data, "de,hl");
+			break;
+
+		case CLOWNZ80_OPCODE_RST:
+		case CLOWNZ80_OPCODE_IM:
+			print_callback((void*)user_data, "%d", metadata->embedded_literal);
+			break;
+
+		case CLOWNZ80_OPCODE_BIT:
+		case CLOWNZ80_OPCODE_RES:
+		case CLOWNZ80_OPCODE_SET:
+			print_callback((void*)user_data, "%d,", metadata->embedded_literal);
+			break;
+
+		case CLOWNZ80_OPCODE_LD_I_A:
+			print_callback((void*)user_data, "i,a");
+			break;
+
+		case CLOWNZ80_OPCODE_LD_R_A:
+			print_callback((void*)user_data, "r,a");
+			break;
+
+		case CLOWNZ80_OPCODE_LD_A_I:
+			print_callback((void*)user_data, "a,i");
+			break;
+
+		case CLOWNZ80_OPCODE_LD_A_R:
+			print_callback((void*)user_data, "a,r");
+			break;
+
+		case CLOWNZ80_OPCODE_NOP:
+		case CLOWNZ80_OPCODE_DJNZ:
+		case CLOWNZ80_OPCODE_JR_UNCONDITIONAL:
+		case CLOWNZ80_OPCODE_LD_16BIT:
+		case CLOWNZ80_OPCODE_ADD_HL:
+		case CLOWNZ80_OPCODE_LD_8BIT:
+		case CLOWNZ80_OPCODE_INC_16BIT:
+		case CLOWNZ80_OPCODE_DEC_16BIT:
+		case CLOWNZ80_OPCODE_INC_8BIT:
+		case CLOWNZ80_OPCODE_DEC_8BIT:
+		case CLOWNZ80_OPCODE_RLCA:
+		case CLOWNZ80_OPCODE_RRCA:
+		case CLOWNZ80_OPCODE_RLA:
+		case CLOWNZ80_OPCODE_RRA:
+		case CLOWNZ80_OPCODE_DAA:
+		case CLOWNZ80_OPCODE_CPL:
+		case CLOWNZ80_OPCODE_SCF:
+		case CLOWNZ80_OPCODE_CCF:
+		case CLOWNZ80_OPCODE_HALT:
+		case CLOWNZ80_OPCODE_ADD_A:
+		case CLOWNZ80_OPCODE_ADC_A:
+		case CLOWNZ80_OPCODE_SUB:
+		case CLOWNZ80_OPCODE_SBC_A:
+		case CLOWNZ80_OPCODE_AND:
+		case CLOWNZ80_OPCODE_XOR:
+		case CLOWNZ80_OPCODE_OR:
+		case CLOWNZ80_OPCODE_CP:
+		case CLOWNZ80_OPCODE_POP:
+		case CLOWNZ80_OPCODE_RET_UNCONDITIONAL:
+		case CLOWNZ80_OPCODE_EXX:
+		case CLOWNZ80_OPCODE_JP_HL:
+		case CLOWNZ80_OPCODE_LD_SP_HL:
+		case CLOWNZ80_OPCODE_JP_UNCONDITIONAL:
+		case CLOWNZ80_OPCODE_CB_PREFIX:
+		case CLOWNZ80_OPCODE_OUT:
+		case CLOWNZ80_OPCODE_IN:
+		case CLOWNZ80_OPCODE_DI:
+		case CLOWNZ80_OPCODE_EI:
+		case CLOWNZ80_OPCODE_PUSH:
+		case CLOWNZ80_OPCODE_CALL_UNCONDITIONAL:
+		case CLOWNZ80_OPCODE_DD_PREFIX:
+		case CLOWNZ80_OPCODE_ED_PREFIX:
+		case CLOWNZ80_OPCODE_FD_PREFIX:
+		case CLOWNZ80_OPCODE_RLC:
+		case CLOWNZ80_OPCODE_RRC:
+		case CLOWNZ80_OPCODE_RL:
+		case CLOWNZ80_OPCODE_RR:
+		case CLOWNZ80_OPCODE_SLA:
+		case CLOWNZ80_OPCODE_SRA:
+		case CLOWNZ80_OPCODE_SLL:
+		case CLOWNZ80_OPCODE_SRL:
+		case CLOWNZ80_OPCODE_IN_REGISTER:
+		case CLOWNZ80_OPCODE_IN_NO_REGISTER:
+		case CLOWNZ80_OPCODE_OUT_REGISTER:
+		case CLOWNZ80_OPCODE_OUT_NO_REGISTER:
+		case CLOWNZ80_OPCODE_SBC_HL:
+		case CLOWNZ80_OPCODE_ADC_HL:
+		case CLOWNZ80_OPCODE_NEG:
+		case CLOWNZ80_OPCODE_RETN:
+		case CLOWNZ80_OPCODE_RETI:
+		case CLOWNZ80_OPCODE_RRD:
+		case CLOWNZ80_OPCODE_RLD:
+		case CLOWNZ80_OPCODE_LDI:
+		case CLOWNZ80_OPCODE_LDD:
+		case CLOWNZ80_OPCODE_LDIR:
+		case CLOWNZ80_OPCODE_LDDR:
+		case CLOWNZ80_OPCODE_CPI:
+		case CLOWNZ80_OPCODE_CPD:
+		case CLOWNZ80_OPCODE_CPIR:
+		case CLOWNZ80_OPCODE_CPDR:
+		case CLOWNZ80_OPCODE_INI:
+		case CLOWNZ80_OPCODE_IND:
+		case CLOWNZ80_OPCODE_INIR:
+		case CLOWNZ80_OPCODE_INDR:
+		case CLOWNZ80_OPCODE_OUTI:
+		case CLOWNZ80_OPCODE_OUTD:
+		case CLOWNZ80_OPCODE_OTIR:
+		case CLOWNZ80_OPCODE_OTDR:
+			break;
+	}
+}
+
 cc_bool ClownZ80_Disassemble(const unsigned char* const machine_code, size_t* const bytes_read, CC_ATTRIBUTE_PRINTF(2, 3) const ClownZ80_PrintCallback print_callback, const void* const user_data)
 {
+	ClownZ80_InstructionMode instruction_mode = CLOWNZ80_INSTRUCTION_MODE_NORMAL;
+	ClownZ80_RegisterMode register_mode = CLOWNZ80_REGISTER_MODE_HL;
 	ClownZ80_InstructionMetadata metadata;
-	ClownZ80_DecodeInstructionMetadata(&metadata, CLOWNZ80_INSTRUCTION_MODE_NORMAL, CLOWNZ80_REGISTER_MODE_HL, machine_code[0]);
+
+	*bytes_read = 0;
+
+	for (;;)
+	{
+		ClownZ80_DecodeInstructionMetadata(&metadata, instruction_mode, register_mode, machine_code[*bytes_read]);
+		++*bytes_read;
+
+		switch (metadata.opcode)
+		{
+			case CLOWNZ80_OPCODE_CB_PREFIX:
+				instruction_mode = CLOWNZ80_INSTRUCTION_MODE_BITS;
+				continue;
+			case CLOWNZ80_OPCODE_DD_PREFIX:
+				register_mode = CLOWNZ80_REGISTER_MODE_IX;
+				continue;
+			case CLOWNZ80_OPCODE_ED_PREFIX:
+				instruction_mode = CLOWNZ80_INSTRUCTION_MODE_MISC;
+				continue;
+			case CLOWNZ80_OPCODE_FD_PREFIX:
+				register_mode = CLOWNZ80_REGISTER_MODE_IY;
+				continue;
+		}
+
+		break;
+	}
+
+	print_callback((void*)user_data, "%-5s", GetOpcodeString(metadata.opcode));
+	PrintSpecialOperands(&metadata, print_callback, user_data);
 
 	if (metadata.operands[0] != CLOWNZ80_OPERAND_NONE && metadata.operands[1] != CLOWNZ80_OPERAND_NONE)
-		print_callback((void*)user_data, "%s %s,%s\n", GetOpcodeString(metadata.opcode), GetOperandString(metadata.operands[1]), GetOperandString(metadata.operands[0]));
+		print_callback((void*)user_data, "%s,%s", GetOperandString(metadata.operands[1]), GetOperandString(metadata.operands[0]));
 	else if (metadata.operands[0] != CLOWNZ80_OPERAND_NONE)
-		print_callback((void*)user_data, "%s %s\n", GetOpcodeString(metadata.opcode), GetOperandString(metadata.operands[0]));
+		print_callback((void*)user_data, "%s", GetOperandString(metadata.operands[0]));
 	else if (metadata.operands[1] != CLOWNZ80_OPERAND_NONE)
-		print_callback((void*)user_data, "%s %s\n", GetOpcodeString(metadata.opcode), GetOperandString(metadata.operands[1]));
-	else
-		print_callback((void*)user_data, "%s\n", GetOpcodeString(metadata.opcode));
+		print_callback((void*)user_data, "%s", GetOperandString(metadata.operands[1]));
 
-	*bytes_read = 1;
+	print_callback((void*)user_data, "\n");
 
 	return !IsTerminatingInstruction(metadata.opcode);
 }
