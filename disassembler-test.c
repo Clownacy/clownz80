@@ -53,7 +53,7 @@ int main(const int argc, char** const argv)
 {
 	unsigned char *file_buffer;
 	size_t file_size;
-	unsigned int index = 0;
+	long index = 0;
 	size_t bytes_read;
 
 	FileToBuffer(argv[1], &file_buffer, &file_size);
@@ -62,6 +62,8 @@ int main(const int argc, char** const argv)
 
 	while (ClownZ80_Disassemble(&file_buffer[index], &bytes_read, PrintCallback, NULL))
 		index += bytes_read;
+
+	free(file_buffer);
 
 	return EXIT_SUCCESS;
 }
