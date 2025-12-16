@@ -404,6 +404,18 @@ static void PrintSpecialOperands(State* const state)
 			break;
 
 		case CLOWNZ80_OPCODE_JR_CONDITIONAL:
+			state->print_callback(state->user_data, "%s,", GetConditionString((ClownZ80_Condition)state->metadata.condition));
+			/* Fallthrough */
+		case CLOWNZ80_OPCODE_JR_UNCONDITIONAL:
+		{
+			/* Turn the offset into an absolute address, to better match how assembly is written. */
+			const cc_s16f offset = ReadByte(state);
+			PrintHexadecimal(state, state->address + CC_SIGN_EXTEND(cc_s16f, 7, offset));
+			/* Since we manually handled the operand, blank them to prevent them from being printed a second time. */
+			state->metadata.operands[0] = state->metadata.operands[1] = CLOWNZ80_OPERAND_NONE;
+			break;
+		}
+
 		case CLOWNZ80_OPCODE_JP_CONDITIONAL:
 		case CLOWNZ80_OPCODE_CALL_CONDITIONAL:
 			state->print_callback(state->user_data, "%s,", GetConditionString((ClownZ80_Condition)state->metadata.condition));
@@ -456,7 +468,6 @@ static void PrintSpecialOperands(State* const state)
 
 		case CLOWNZ80_OPCODE_NOP:
 		case CLOWNZ80_OPCODE_DJNZ:
-		case CLOWNZ80_OPCODE_JR_UNCONDITIONAL:
 		case CLOWNZ80_OPCODE_LD_16BIT:
 		case CLOWNZ80_OPCODE_ADD_HL:
 		case CLOWNZ80_OPCODE_LD_8BIT:
