@@ -62,7 +62,14 @@ static void PrintCallback(void* const user_data, const char* const format, ...)
 
 int main(const int argc, char** const argv)
 {
-	FileToBuffer(argv[1], &file_buffer, &file_size);
+	if (argc < 2)
+	{
+		fputs("Provide file path as argument.\n", stderr);
+		return EXIT_FAILURE;
+	}
+
+	if (!FileToBuffer(argv[1], &file_buffer, &file_size))
+		return EXIT_FAILURE;
 
 	sscanf(argv[2], "%lX", &file_position);
 
