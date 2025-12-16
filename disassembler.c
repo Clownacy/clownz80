@@ -1,6 +1,58 @@
 #include "disassembler.h"
 
+#include <stdio.h>
+
 #include "common.h"
+
+typedef struct State
+{
+	const unsigned char *machine_code;
+	size_t bytes_read;
+	CC_ATTRIBUTE_PRINTF(2, 3) ClownZ80_PrintCallback print_callback;
+	void *user_data;
+
+	ClownZ80_InstructionMetadata metadata;
+} State;
+
+static void PrintHexadecimal(State* const state, const unsigned int number)
+{
+	char buffer[4 + 1];
+
+	sprintf(buffer, "%X", number);
+
+	if (buffer[0] > '9')
+		state->print_callback(state->user_data, "0");
+
+	state->print_callback(state->user_data, "%s", buffer);
+
+	if (number > 9)
+		state->print_callback(state->user_data, "h");
+}
+
+static unsigned int BitmaskToIndex(const unsigned int mask)
+{
+	switch (mask)
+	{
+		case 1 << 0:
+			return 0;
+		case 1 << 1:
+			return 1;
+		case 1 << 2:
+			return 2;
+		case 1 << 3:
+			return 3;
+		case 1 << 4:
+			return 4;
+		case 1 << 5:
+			return 5;
+		case 1 << 6:
+			return 6;
+		case 1 << 7:
+			return 7;
+	}
+
+	return 0;
+}
 
 static const char* GetOpcodeString(const ClownZ80_Opcode opcode)
 {
@@ -199,71 +251,6 @@ static const char* GetOpcodeString(const ClownZ80_Opcode opcode)
 	return "[INVALID]";
 }
 
-static const char* GetOperandString(const ClownZ80_Operand operand)
-{
-	switch (operand)
-	{
-		case CLOWNZ80_OPERAND_NONE:
-			return "[NONE]";
-		case CLOWNZ80_OPERAND_A:
-			return "a";
-		case CLOWNZ80_OPERAND_B:
-			return "b";
-		case CLOWNZ80_OPERAND_C:
-			return "c";
-		case CLOWNZ80_OPERAND_D:
-			return "d";
-		case CLOWNZ80_OPERAND_E:
-			return "e";
-		case CLOWNZ80_OPERAND_H:
-			return "h";
-		case CLOWNZ80_OPERAND_L:
-			return "l";
-		case CLOWNZ80_OPERAND_IXH:
-			return "ixh";
-		case CLOWNZ80_OPERAND_IXL:
-			return "ixl";
-		case CLOWNZ80_OPERAND_IYH:
-			return "iyh";
-		case CLOWNZ80_OPERAND_IYL:
-			return "iyl";
-		case CLOWNZ80_OPERAND_AF:
-			return "af";
-		case CLOWNZ80_OPERAND_BC:
-			return "bc";
-		case CLOWNZ80_OPERAND_DE:
-			return "de";
-		case CLOWNZ80_OPERAND_HL:
-			return "hl";
-		case CLOWNZ80_OPERAND_IX:
-			return "ix";
-		case CLOWNZ80_OPERAND_IY:
-			return "iy";
-		case CLOWNZ80_OPERAND_PC:
-			return "pc";
-		case CLOWNZ80_OPERAND_SP:
-			return "sp";
-		case CLOWNZ80_OPERAND_BC_INDIRECT:
-			return "(bc)";
-		case CLOWNZ80_OPERAND_DE_INDIRECT:
-			return "(de)";
-		case CLOWNZ80_OPERAND_HL_INDIRECT:
-			return "(hl)";
-		case CLOWNZ80_OPERAND_IX_INDIRECT:
-			return "(ix+X)";
-		case CLOWNZ80_OPERAND_IY_INDIRECT:
-			return "(iy+X)";
-		case CLOWNZ80_OPERAND_ADDRESS:
-			return "[ADDRESS]";
-		case CLOWNZ80_OPERAND_LITERAL_8BIT:
-			return "[LITERAL]";
-		case CLOWNZ80_OPERAND_LITERAL_16BIT:
-			return "[LITERAL]";
-	}
-
-	return "[INVALID]";
-}
-
 static const char* GetConditionString(const ClownZ80_Condition condition)
 {
 	switch (condition)
@@ -395,57 +382,72 @@ static cc_bool IsTerminatingInstruction(const ClownZ80_Opcode opcode)
 	return cc_false;
 }
 
-static void PrintSpecialOperands(const ClownZ80_InstructionMetadata* const metadata, CC_ATTRIBUTE_PRINTF(2, 3) const ClownZ80_PrintCallback print_callback, const void* const user_data)
+static void PrintSpecialOperands(State* const state)
 {
-	switch ((ClownZ80_Opcode)metadata->opcode)
+	switch ((ClownZ80_Opcode)state->metadata.opcode)
 	{
 		case CLOWNZ80_OPCODE_EX_AF_AF:
-			print_callback((void*)user_data, "af,af'");
+			state->print_callback(state->user_data, "af,af'");
 			break;
 
 		case CLOWNZ80_OPCODE_RET_CONDITIONAL:
-			print_callback((void*)user_data, "%s", GetConditionString(metadata->condition));
+			state->print_callback(state->user_data, "%s", GetConditionString(state->metadata.condition));
 			break;
 
 		case CLOWNZ80_OPCODE_JR_CONDITIONAL:
 		case CLOWNZ80_OPCODE_JP_CONDITIONAL:
 		case CLOWNZ80_OPCODE_CALL_CONDITIONAL:
-			print_callback((void*)user_data, "%s,", GetConditionString(metadata->condition));
+			state->print_callback(state->user_data, "%s,", GetConditionString(state->metadata.condition));
 			break;
 
 		case CLOWNZ80_OPCODE_EX_SP_HL:
-			print_callback((void*)user_data, "(sp),");
+			state->print_callback(state->user_data, "(sp),");
 			break;
 
 		case CLOWNZ80_OPCODE_EX_DE_HL:
-			print_callback((void*)user_data, "de,hl");
+			state->print_callback(state->user_data, "de,hl");
 			break;
 
 		case CLOWNZ80_OPCODE_RST:
 		case CLOWNZ80_OPCODE_IM:
-			print_callback((void*)user_data, "%d", metadata->embedded_literal);
+			state->print_callback(state->user_data, "%" CC_PRIuLEAST8, state->metadata.embedded_literal);
 			break;
 
 		case CLOWNZ80_OPCODE_BIT:
 		case CLOWNZ80_OPCODE_RES:
 		case CLOWNZ80_OPCODE_SET:
-			print_callback((void*)user_data, "%d,", metadata->embedded_literal);
+			state->print_callback(state->user_data, "%u,", BitmaskToIndex(state->metadata.embedded_literal));
 			break;
 
 		case CLOWNZ80_OPCODE_LD_I_A:
-			print_callback((void*)user_data, "i,a");
+			state->print_callback(state->user_data, "i,a");
 			break;
 
 		case CLOWNZ80_OPCODE_LD_R_A:
-			print_callback((void*)user_data, "r,a");
+			state->print_callback(state->user_data, "r,a");
 			break;
 
 		case CLOWNZ80_OPCODE_LD_A_I:
-			print_callback((void*)user_data, "a,i");
+			state->print_callback(state->user_data, "a,i");
 			break;
 
 		case CLOWNZ80_OPCODE_LD_A_R:
-			print_callback((void*)user_data, "a,r");
+			state->print_callback(state->user_data, "a,r");
+			break;
+
+		case CLOWNZ80_OPCODE_ADD_A:
+		case CLOWNZ80_OPCODE_ADC_A:
+		case CLOWNZ80_OPCODE_SUB:
+		case CLOWNZ80_OPCODE_SBC_A:
+		case CLOWNZ80_OPCODE_AND:
+		case CLOWNZ80_OPCODE_XOR:
+		case CLOWNZ80_OPCODE_OR:
+		case CLOWNZ80_OPCODE_CP:
+			state->print_callback(state->user_data, "a,");
+			break;
+
+		case CLOWNZ80_OPCODE_LD_SP_HL:
+			state->print_callback(state->user_data, "sp,");
 			break;
 
 		case CLOWNZ80_OPCODE_NOP:
@@ -467,19 +469,10 @@ static void PrintSpecialOperands(const ClownZ80_InstructionMetadata* const metad
 		case CLOWNZ80_OPCODE_SCF:
 		case CLOWNZ80_OPCODE_CCF:
 		case CLOWNZ80_OPCODE_HALT:
-		case CLOWNZ80_OPCODE_ADD_A:
-		case CLOWNZ80_OPCODE_ADC_A:
-		case CLOWNZ80_OPCODE_SUB:
-		case CLOWNZ80_OPCODE_SBC_A:
-		case CLOWNZ80_OPCODE_AND:
-		case CLOWNZ80_OPCODE_XOR:
-		case CLOWNZ80_OPCODE_OR:
-		case CLOWNZ80_OPCODE_CP:
 		case CLOWNZ80_OPCODE_POP:
 		case CLOWNZ80_OPCODE_RET_UNCONDITIONAL:
 		case CLOWNZ80_OPCODE_EXX:
 		case CLOWNZ80_OPCODE_JP_HL:
-		case CLOWNZ80_OPCODE_LD_SP_HL:
 		case CLOWNZ80_OPCODE_JP_UNCONDITIONAL:
 		case CLOWNZ80_OPCODE_CB_PREFIX:
 		case CLOWNZ80_OPCODE_OUT:
@@ -530,20 +523,127 @@ static void PrintSpecialOperands(const ClownZ80_InstructionMetadata* const metad
 	}
 }
 
+static void PrintOperand(State* const state, const unsigned int operand_index)
+{
+	switch (state->metadata.operands[operand_index])
+	{
+		case CLOWNZ80_OPERAND_NONE:
+			state->print_callback(state->user_data, "[NONE]");
+			break;
+		case CLOWNZ80_OPERAND_A:
+			state->print_callback(state->user_data, "a");
+			break;
+		case CLOWNZ80_OPERAND_B:
+			state->print_callback(state->user_data, "b");
+			break;
+		case CLOWNZ80_OPERAND_C:
+			state->print_callback(state->user_data, "c");
+			break;
+		case CLOWNZ80_OPERAND_D:
+			state->print_callback(state->user_data, "d");
+			break;
+		case CLOWNZ80_OPERAND_E:
+			state->print_callback(state->user_data, "e");
+			break;
+		case CLOWNZ80_OPERAND_H:
+			state->print_callback(state->user_data, "h");
+			break;
+		case CLOWNZ80_OPERAND_L:
+			state->print_callback(state->user_data, "l");
+			break;
+		case CLOWNZ80_OPERAND_IXH:
+			state->print_callback(state->user_data, "ixh");
+			break;
+		case CLOWNZ80_OPERAND_IXL:
+			state->print_callback(state->user_data, "ixl");
+			break;
+		case CLOWNZ80_OPERAND_IYH:
+			state->print_callback(state->user_data, "iyh");
+			break;
+		case CLOWNZ80_OPERAND_IYL:
+			state->print_callback(state->user_data, "iyl");
+			break;
+		case CLOWNZ80_OPERAND_AF:
+			state->print_callback(state->user_data, "af");
+			break;
+		case CLOWNZ80_OPERAND_BC:
+			state->print_callback(state->user_data, "bc");
+			break;
+		case CLOWNZ80_OPERAND_DE:
+			state->print_callback(state->user_data, "de");
+			break;
+		case CLOWNZ80_OPERAND_HL:
+			state->print_callback(state->user_data, "hl");
+			break;
+		case CLOWNZ80_OPERAND_IX:
+			state->print_callback(state->user_data, "ix");
+			break;
+		case CLOWNZ80_OPERAND_IY:
+			state->print_callback(state->user_data, "iy");
+			break;
+		case CLOWNZ80_OPERAND_PC:
+			state->print_callback(state->user_data, "pc");
+			break;
+		case CLOWNZ80_OPERAND_SP:
+			state->print_callback(state->user_data, "sp");
+			break;
+		case CLOWNZ80_OPERAND_BC_INDIRECT:
+			state->print_callback(state->user_data, "(bc)");
+			break;
+		case CLOWNZ80_OPERAND_DE_INDIRECT:
+			state->print_callback(state->user_data, "(de)");
+			break;
+		case CLOWNZ80_OPERAND_HL_INDIRECT:
+			state->print_callback(state->user_data, "(hl)");
+			break;
+		case CLOWNZ80_OPERAND_IX_INDIRECT:
+			state->print_callback(state->user_data, "(ix%+" CC_PRIdFAST16 ")", CC_SIGN_EXTEND(cc_s16f, 7, (cc_s16f)state->machine_code[state->bytes_read]));
+			++state->bytes_read;
+			break;
+		case CLOWNZ80_OPERAND_IY_INDIRECT:
+			state->print_callback(state->user_data, "(iy%+" CC_PRIdFAST16 ")", CC_SIGN_EXTEND(cc_s16f, 7, (cc_s16f)state->machine_code[state->bytes_read]));
+			++state->bytes_read;
+			break;
+		case CLOWNZ80_OPERAND_ADDRESS:
+		{
+			const unsigned int first_byte = state->machine_code[state->bytes_read++];
+			const unsigned int second_byte = state->machine_code[state->bytes_read++];
+			state->print_callback(state->user_data, "(");
+			PrintHexadecimal(state, first_byte | (second_byte << 8));
+			state->print_callback(state->user_data, ")");
+			break;
+		}
+			break;
+		case CLOWNZ80_OPERAND_LITERAL_8BIT:
+			PrintHexadecimal(state, state->machine_code[state->bytes_read++]);
+			break;
+		case CLOWNZ80_OPERAND_LITERAL_16BIT:
+		{
+			const unsigned int first_byte = state->machine_code[state->bytes_read++];
+			const unsigned int second_byte = state->machine_code[state->bytes_read++];
+			PrintHexadecimal(state, first_byte | (second_byte << 8));
+			break;
+		}
+	}
+}
+
 cc_bool ClownZ80_Disassemble(const unsigned char* const machine_code, size_t* const bytes_read, CC_ATTRIBUTE_PRINTF(2, 3) const ClownZ80_PrintCallback print_callback, const void* const user_data)
 {
+	State state;
 	ClownZ80_InstructionMode instruction_mode = CLOWNZ80_INSTRUCTION_MODE_NORMAL;
 	ClownZ80_RegisterMode register_mode = CLOWNZ80_REGISTER_MODE_HL;
-	ClownZ80_InstructionMetadata metadata;
 
-	*bytes_read = 0;
+	state.machine_code = machine_code;
+	state.bytes_read = 0;
+	state.print_callback = print_callback;
+	state.user_data = (void*)user_data;
 
 	for (;;)
 	{
-		ClownZ80_DecodeInstructionMetadata(&metadata, instruction_mode, register_mode, machine_code[*bytes_read]);
-		++*bytes_read;
+		ClownZ80_DecodeInstructionMetadata(&state.metadata, instruction_mode, register_mode, state.machine_code[state.bytes_read]);
+		++state.bytes_read;
 
-		switch (metadata.opcode)
+		switch (state.metadata.opcode)
 		{
 			case CLOWNZ80_OPCODE_CB_PREFIX:
 				instruction_mode = CLOWNZ80_INSTRUCTION_MODE_BITS;
@@ -562,17 +662,27 @@ cc_bool ClownZ80_Disassemble(const unsigned char* const machine_code, size_t* co
 		break;
 	}
 
-	print_callback((void*)user_data, "%-5s", GetOpcodeString(metadata.opcode));
-	PrintSpecialOperands(&metadata, print_callback, user_data);
+	state.print_callback(state.user_data, "%-5s", GetOpcodeString(state.metadata.opcode));
+	PrintSpecialOperands(&state);
 
-	if (metadata.operands[0] != CLOWNZ80_OPERAND_NONE && metadata.operands[1] != CLOWNZ80_OPERAND_NONE)
-		print_callback((void*)user_data, "%s,%s", GetOperandString(metadata.operands[1]), GetOperandString(metadata.operands[0]));
-	else if (metadata.operands[0] != CLOWNZ80_OPERAND_NONE)
-		print_callback((void*)user_data, "%s", GetOperandString(metadata.operands[0]));
-	else if (metadata.operands[1] != CLOWNZ80_OPERAND_NONE)
-		print_callback((void*)user_data, "%s", GetOperandString(metadata.operands[1]));
+	if (state.metadata.operands[0] != CLOWNZ80_OPERAND_NONE && state.metadata.operands[1] != CLOWNZ80_OPERAND_NONE)
+	{
+		PrintOperand(&state, 1);
+		state.print_callback(state.user_data, ",");
+		PrintOperand(&state, 0);
+	}
+	else if (state.metadata.operands[0] != CLOWNZ80_OPERAND_NONE)
+	{
+		PrintOperand(&state, 0);
+	}
+	else if (state.metadata.operands[1] != CLOWNZ80_OPERAND_NONE)
+	{
+		PrintOperand(&state, 1);
+	}
 
-	print_callback((void*)user_data, "\n");
+	state.print_callback(state.user_data, "\n");
 
-	return !IsTerminatingInstruction(metadata.opcode);
+	*bytes_read = state.bytes_read;
+
+	return !IsTerminatingInstruction(state.metadata.opcode);
 }

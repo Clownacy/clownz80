@@ -53,10 +53,12 @@ int main(const int argc, char** const argv)
 {
 	unsigned char *file_buffer;
 	size_t file_size;
-	size_t index = 0;
+	unsigned int index = 0;
 	size_t bytes_read;
 
 	FileToBuffer(argv[1], &file_buffer, &file_size);
+
+	sscanf(argv[2], "%X", &index);
 
 	while (ClownZ80_Disassemble(&file_buffer[index], &bytes_read, PrintCallback, NULL))
 		index += bytes_read;
