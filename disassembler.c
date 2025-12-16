@@ -701,7 +701,7 @@ static cc_bool DisassembleInstruction(State* const state)
 	return !IsTerminatingInstruction((ClownZ80_Opcode)state->metadata.opcode);
 }
 
-void ClownZ80_Disassemble(const unsigned long address, const unsigned int maximum_instructions, ClownZ80_ReadCallback read_callback, CC_ATTRIBUTE_PRINTF(2, 3) const ClownZ80_PrintCallback print_callback, const void* const user_data)
+void ClownZ80_Disassemble(const unsigned long address, const unsigned int maximum_instructions, const ClownZ80_ReadCallback read_callback, CC_ATTRIBUTE_PRINTF(2, 3) const ClownZ80_PrintCallback print_callback, const void* const user_data)
 {
 	State state;
 	unsigned int i;
