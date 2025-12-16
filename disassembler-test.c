@@ -8,7 +8,7 @@
 
 static unsigned char *file_buffer;
 static size_t file_size;
-static long file_position;
+static unsigned long file_position;
 
 static cc_bool FileToBuffer(const char* const file_path, unsigned char** const file_buffer, size_t* const file_size)
 {
