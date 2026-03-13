@@ -1,7 +1,7 @@
 #ifndef CLOWNZ80_COMMON_H
 #define CLOWNZ80_COMMON_H
 
-#include "clowncommon/clowncommon.h"
+#include "../libraries/clowncommon/clowncommon.h"
 
 typedef enum ClownZ80_Opcode
 {

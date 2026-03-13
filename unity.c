@@ -1,2 +1,2 @@
-#include "common.c"
-#include "interpreter.c"
+#include "source/common.c"
+#include "source/interpreter.c"

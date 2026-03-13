@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "clowncommon/clowncommon.h"
+#include "../libraries/clowncommon/clowncommon.h"
 
 #include "disassembler.h"
 
