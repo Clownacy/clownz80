@@ -571,6 +571,11 @@ static void ExecuteInstruction(ClownZ80_State* const state, const ClownZ80_ReadA
 	{
 		#define UNIMPLEMENTED_Z80_INSTRUCTION(instruction) callbacks->log((void*)callbacks->user_data, "Unimplemented instruction " instruction " used at 0x%" CC_PRIXLEAST16, state->program_counter)
 
+		/* Do this to optimise the switch statement by eliminating the bounds-checking. */
+		default:
+			CC_UNREACHABLE;
+			break;
+
 		case CLOWNZ80_OPCODE_NOP:
 			/* Does nothing, naturally. */
 			break;
